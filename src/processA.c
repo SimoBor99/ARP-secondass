@@ -29,7 +29,7 @@ void print_circle() {
   	}
   	sprintf(num,"%d",n_snapshot);
   	strcat(path,num);
-  	strcat(path,".bmp");
+  	strcat(path,".bmp");	// TODO: Chiedere su creazione cartella out
   	bmp_save(bmp, path); // TODO: Chiedere a Macciò se va bene rimpiazzare gli snaphot in esecuzioni diverse
   	n_snapshot += 1;
   	bmp_destroy(bmp);
