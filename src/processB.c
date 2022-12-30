@@ -1,35 +1,48 @@
 #include "./../include/processB_utilities.h"
 
+// we initialize stuff...
+int posx = 0;
+int posy = 0;
+int width = 1600;
+int height = 600;
+int depth = 4;
+const int SIZE = 960000;
+int i, fd_shm;
+char * ptr;
+
 int main(int argc, char const *argv[])
 {
-    // Utility variable to avoid trigger resize event on launch
-    int first_resize = TRUE;
+	    const char * shm_name = argv[1];
+    	// Utility variable to avoid trigger resize event on launch
+    	int first_resize = TRUE;
 
-    // Initialize UI
-    init_console_ui();
+    	// Initialize UI
+    	init_console_ui();
 
-    // Infinite loop
-    while (TRUE) {
+	    mvaddch(LINES/2, COLS/2, '0');
+        refresh();
 
-        // Get input in non-blocking mode
-        int cmd = getch();
+    	// Infinite loop
+    	while (TRUE) {
 
-        // If user resizes screen, re-draw UI...
-        if(cmd == KEY_RESIZE) {
-            if(first_resize) {
-                first_resize = FALSE;
-            }
-            else {
-                reset_console_ui();
-            }
-        }
+        	// Get input in non-blocking mode
+        	int cmd = getch();
 
-        else {
-            mvaddch(LINES/2, COLS/2, '0');
-            refresh();
-        }
-    }
+        	// If user resizes screen, re-draw UI...
+        	if(cmd == KEY_RESIZE) {
+            		if(first_resize) {
+                		first_resize = FALSE;
+            		}
+            		else {
+                		reset_console_ui();
+            		}
+        	}
 
-    endwin();
-    return 0;
+        	else {
+            
+        	}
+    	}
+
+    	endwin();
+    	return 0;
 }
