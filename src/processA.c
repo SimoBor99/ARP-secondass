@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <math.h>
+#include <fcntl.h>
 #include <sys/shm.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -16,13 +17,14 @@ int posy = 0;
 int width = 1600;
 int height = 600;
 int depth = 4;
-char path[100] = "out/snap";
+const int SIZE = 960000;
+int i, fd_shm;
 
 // we declare bmp file, bmp_vec and pixel
 bmpfile_t *bmp;
 rgb_pixel_t pixel = {255, 0, 0, 0};
 rgb_pixel_t * pixelv;
-int bmp_vec[960000];
+char bmp_vec[960000];
 
 // function to be executed when the 'P' button is pressed
 void print_circle(int px, int py) {
@@ -32,6 +34,7 @@ void print_circle(int px, int py) {
   	rgb_pixel_t pixelp = {255, 0, 0, 0};
   	rgb_pixel_t pixelw = {0, 0, 0, 0};
   
+  	char path[100] = "out/snap";
   	char num[20];
 	bmpp = bmp_create(width, height, depth);
   
@@ -63,10 +66,10 @@ void vectorize() {
 			pixelv = bmp_get_pixel(bmp,i,j);
 			val = pixelv->blue;
 			if (val == 255) {
-				bmp_vec[count]=val;
+				bmp_vec[count]='1';
 			}
 			else {
-				bmp_vec[count]=val;
+				bmp_vec[count]='0';
 			}
 			count += 1;
 		}
@@ -102,38 +105,68 @@ void init_bmp() {
 }
 
 void write_shm (int fd_shm) {
-	int *ptr=mmap(0, sizeof(bmp_vec), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
+	char *ptr=mmap(0, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
 	if (ptr==MAP_FAILED) {
 		printf("Map failed\n");
 		exit(1);
 	}
 	// write into memory segment
-	for ( int i=0; i<960000; i++) {
-		ptr[i]=bmp_vec[i];
-		ptr=ptr+1;
+	for (int i=0; i<SIZE; i++) {
+		*ptr = bmp_vec[i];
+		ptr += 1;
 	}
-	munmap(ptr, sizeof(bmp_vec));
+	munmap(ptr, SIZE);
 	
 }
 // function to modify the bmp file if the circle has been moved
 void move_bmp(int posx, int posy) {
+	posx *= 20;
+	posy *= 20;
+	rgb_pixel_t pixelb = {255, 0, 0, 0};
+  	rgb_pixel_t pixelw = {0, 0, 0, 0};
+  	int countz = 0;
+  
+  	char num[20];
+  
+	int radius = 30;
+	
+	for(int a = 0; a < width; a++) {
+		for (int b = 0; b < height; b++) {
+			bmp_set_pixel(bmp, a, b, pixelw);
+		}
+	}
+	
+	for(int x = -radius; x <= radius; x++) {
+    		for(int y = -radius; y <= radius; y++) {
+      		// If distance is smaller, point is within the circle
+      			if(sqrt(x*x + y*y) < radius) {
+          			bmp_set_pixel(bmp, width/2 + x + posx, height/2 + y - posy, pixelb);
+      			}
+    		}
+  	}
 }
 
 // main function
 int main(int argc, char *argv[])
 {
+    const char * shm_name = argv[1];
     // Utility variable to avoid trigger resize event on launch
     int first_resize = TRUE;
  
     // shared memory fd
-    int fd_shm=atoi(argv[1]);
+    fd_shm = shm_open(shm_name, O_RDWR, 0666);
+    if (fd_shm == -1) {
+    	printf("Shared memory segment failed\n");
+    	exit(1);
+    }
     // Initialize UI
     init_console_ui();
     
     // we initialize the bmp file of process A
     init_bmp();
     vectorize();
-    ftruncate(fd_shm, sizeof(bmp_vec));
+    ftruncate(fd_shm, SIZE);
+    write_shm(fd_shm);
     
     // Infinite loop
     while (TRUE)
@@ -178,7 +211,7 @@ int main(int argc, char *argv[])
             			draw_circle();
             			move_bmp(posx, posy);
             			vectorize();
-            			//write_shm(fd_shm);
+            			write_shm(fd_shm);
             			usleep(20000);
             		}
             		break;
@@ -189,7 +222,7 @@ int main(int argc, char *argv[])
             			draw_circle();
             			move_bmp(posx, posy);
             			vectorize();
-            			//write_shm(fd_shm);
+            			write_shm(fd_shm);
             			usleep(20000);
             		}
             		break;
@@ -200,7 +233,7 @@ int main(int argc, char *argv[])
             			draw_circle();
             			move_bmp(posx, posy);
             			vectorize();
-            			//write_shm(fd_shm);
+            			write_shm(fd_shm);
             			usleep(20000);
             		}
             		break;
@@ -211,7 +244,7 @@ int main(int argc, char *argv[])
             			draw_circle();
             			move_bmp(posx, posy);
             			vectorize();
-            			//write_shm(fd_shm);
+            			write_shm(fd_shm);
             			usleep(20000);
             		}
             		break;
