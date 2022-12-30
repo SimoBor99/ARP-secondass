@@ -12,6 +12,8 @@
 
 // declaration pids of two proccesses
 pid_t pid_procA, pid_procB;
+
+// size of shared memory
 const int dim_mem=1600*600;
 
 int spawn(const char * program, char * arg_list[]) {
