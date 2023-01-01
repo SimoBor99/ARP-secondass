@@ -8,6 +8,7 @@
 #include <sys/shm.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <string.h>
 
 // we initialize stuff...
 int posx = 0;
@@ -27,17 +28,9 @@ char bmp_vec[960000];
 
 // function for reading from shared memory
 void read_shm() {
-	int countn = 0;
-	sprintf(bmp_vec,"%s", (char *) ptr);
-	//printf("%s", bmp_vec);
-	for(int i = 0; i < SIZE; i++) {
-	if (bmp_vec[i] == 48) {
-		printf("%d\n", countn);
-		countn++;
-	}
-	}
-	printf("%d\n", countn);
-	
+	strcpy(bmp_vec, ptr);
+    	//printf("%s", *ptr);
+	printf("%s", bmp_vec);
 }
 
 // main function
