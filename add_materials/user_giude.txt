@@ -57,15 +57,15 @@ The program consists in three processes:
 
 * Master process
 
-This is the process which creates, truncates the segment of shared memory and starts everything: after starting its execution, this process spawns two other processes, passing them, as argument, the name of shared memory. When the user presses ctrl+c on keyboard, this process must send two signals for kill children processes and close file descriptor, unmap its memory address and then unlink the segment memory.
+This is the process which creates the shared memory, truncates the segment of it and starts everything: after starting its execution, this process spawns two other processes, passing them, as argument, the name of shared memory. When the user presses ctrl+c on the keyboard, this process sends two signals for killing processes A and B, closes the file descriptors, unmaps its memory address and finally unlinks the segment memory.
 
 * Process A
 
-This process shows a grapich interface, where there are a sort of green "cross" and a P button. If the P button is pressed, a screenshot of the image is captured and saved. Process A has the task to register as bmp file, in the shared memory, the current position of the circle in the 80x30 px area. Firstly it creates the image of the circle, with a readius of 30 px and spawns it in the middle of the area, then, every time the user presses any arrow buttons on the keyboard, it creates a new image of the current position of the figure, which replaces the old one. The resolution of image is 1600x600 px, so there is a factor of 20x in the building of it. Actually the process does not share the bmp file in the shared memory, because it is a dynamic structure; there is one more step for doing that: it copies, bit for bit, the whole structure into an array of char and, obviously, shares it.
+This process shows a grapichal interface, where there are a sort of green "cross" and a P button. If the P button is pressed, a snapshot of the image is captured and saved into the out folder. Process A has the task to register as bmp file, in the shared memory, the current position of the circle in the 80x30 px area. Firstly, it creates the image of the circle, with a radius of 30 px and spawns it in the middle of the area, then, every time the user presses any arrow buttons on the keyboard, it creates a new image of the current position of the figure, which replaces the old one. The resolution of image is 1600x600 px, so there is a factor of 20x in the building of it. Actually, the process does not share the bmp file in the shared memory, because it is a dynamic structure; there is one more step for doing that: it copies, bit for bit, the whole structure into an array of char and, obviously, shares it through the shared memory.
 
 * Process B
 
-This process shows a grapich interface, where at the beggining there is a 0 in the middle. It continuosly reads the data from shared memory, converts them into a bitmap file, which size is now 80x30 px, so it resizes the image dividing by a factor of 20x; then it has to find the current center of the circle, and, finally, draws the trajectory of it. For finding the center of the circle, process B scans the whole bitmap file and, after scanning 30 adjacent colored pixel, it register the position of the center. Trajectory consists in a sort of vertical and horizontal hyphens, and 0 represents where is the center. Actually the position of the center  in an almost real time, because there is some delay in reading the shared memory and in rebuilding the image.
+This process shows a grapichal interface, where, at the beginning, there is only a 0 in the middle. The 0 represents the center of the image shown into the process A window. This process continuosly reads the data from shared memory, converts them into a bitmap file, which size is now 80x30 px, so it resizes the image dividing by a factor of 20x; then it has to find the current center of the circle, and, finally, draws the trajectory of it. For finding the center of the circle, process B scans the whole bitmap file and, after scanning half of the blue pixels that compose the circle, it register the position of the center. Trajectory consists in a sort of vertical and horizontal hyphens, and 0 represents where is the center. Actually the position of the center  in an almost real time, because there is some delay in reading the shared memory and in rebuilding the image.
 
 
 User Guide
@@ -73,14 +73,16 @@ User Guide
 
 Once you have followed the guide on README file, that is in our github repository https://github.com/SimoBor99/ARP-secondass and is mandatory before to keep on reading this guide, the first two things that you can see are graphical interfaces of konsole, which are described below. Do not worry if the two interface are bugged; sometimes it happens and, for fixing it, resize them with mouse, and everything will be fine.
 
-In the first one you can see:
-* A p button, that if it is pressed by clicking the mouse, takes a screenshot of the image. Actually it is not a screenshot of the green cross, but a blue circle that is simplier to codify as a bitmap file. This image is saved into out folder, that is in the same directory of the project. If you press several times the button, several images are saved. So there is no replacement.
-* A green cross, that is the image which you can iteract by pressing any arrow buttons on the keyboard; even if the user makes the window full screen, the cross is constrained to move in an area of 80x30 px; so do not worry if after certain time, the cross does not move even if you are continuosly pressing the upper or lower arrow; probabily it reaches the bounds. 
+In the first window you can see:
+* A P button that, if pressed by clicking on it with the mouse, takes a screenshot of the image. Actually, it is not a screenshot of the green cross, but a blue circle that is simplier to codify as a bitmap file. This image is saved into the out folder, which is in the same directory of the project. If you press several times the button, several images are saved. So there is no replacement.
+(IMPORTANT NOTE: The names for the .bmp files saved into the out folder are: snapshot'n'.bmp ('n' is a number); the n always starts from zero after starting the program, so, after you finish the execution of the program, be sure to change the names of the snapshot you've taken; otherwise, if you start a  new execution of the program and take new snapshots, these will replace the old ones, because they will have the same name!)
+* A green cross, which is the image that you can interact with, by pressing any arrow buttons on the keyboard; even if the user makes the window full screen, the cross is constrained to move in an area of 80x30 px; so do not worry if after certain time, the cross does not move even if you are continuosly pressing the upper or lower arrow; probabily it has reached the bounds. 
 
-In the second one you can see:
-At the beggining you can see a zero in the middle of the screen; it is stands for the current position of the center of the cross. If you move it, in the other window, you can see several vertical ( if you have pressed upper or lower arrows) or horizontal ( if you have pressed left or right arrows) hyphens, that stand for the trajectory, and, if you stop to move the cross, zero which stands for the current position of the center. So as recap:
+In the second window you can see:
+At the beginning you can see a zero in the middle of the screen; it represents the current position of the cross' center. If you move the cross in the other window, you can see several vertical (if you have pressed upper or lower arrows) or horizontal (if you have pressed left or right arrows) hyphens: they represent the trajectory of the cross' center and th new position of the center of the cross, represented by the 0 symbol.
+So as recap:
 * hyphens stands for the trajectory, the motion ot the center;
 * zero stands for the current center, or even better the last position of the center.
 
-If you want to terminate this program, you can simply press ctrl+c on the terminal window, and everythin will disappear.
+If you want to terminate this program, you can simply press ctrl+c on the terminal window, and everything will disappear.
 
