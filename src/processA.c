@@ -9,6 +9,10 @@
 #include <sys/shm.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <semaphore.h>
+#define SEM_PATH_1 "/sem_AOS_1"
+#define SEM_PATH_2 "/sem_AOS_2"
+
 
 // we initialize stuff...
 int n_snapshot = 0;
@@ -18,7 +22,7 @@ int width = 1600;
 int height = 600;
 int depth = 4;
 const int SIZE = 960000;
-int i, fd_shm;
+int i, shm_fd;
 
 // we declare bmp file, bmp_vec and pixel
 bmpfile_t *bmp;
@@ -104,18 +108,12 @@ void init_bmp() {
   	}
 }
 
-void write_shm (int fd_shm) {
-	char *ptr=mmap(0, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0);
-	if (ptr==MAP_FAILED) {
-		printf("Map failed\n");
-		exit(1);
-	}
+void write_shm (int shm_fd, char * ptr) {
 	// write into memory segment
 	for (int i=0; i<SIZE; i++) {
 		*ptr = bmp_vec[i];
 		ptr += 1;
 	}
-	munmap(ptr, SIZE);
 	
 }
 // function to modify the bmp file if the circle has been moved
@@ -154,19 +152,81 @@ int main(int argc, char *argv[])
     int first_resize = TRUE;
  
     // shared memory fd
-    fd_shm = shm_open(shm_name, O_RDWR, 0666);
-    if (fd_shm == -1) {
+    shm_fd = shm_open(shm_name, O_RDWR, 0666);
+    if (shm_fd== -1) {
     	printf("Shared memory segment failed\n");
     	exit(1);
     }
+
+	char *ptr=mmap(0, SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+	if (ptr==MAP_FAILED) {
+		printf("Map failed\n");
+		exit(1);
+	}
     // Initialize UI
     init_console_ui();
     
     // we initialize the bmp file of process A
     init_bmp();
     vectorize();
-    ftruncate(fd_shm, SIZE);
-    write_shm(fd_shm);
+    ftruncate(shm_fd, SIZE);
+    write_shm(shm_fd, ptr);
+
+	// we open first semaphore
+	sem_t * sem_id1=sem_open(SEM_PATH_1, O_CREAT, S_IRUSR | S_IWUSR, 1);
+	if ( sem_id1==SEM_FAILED) {
+		perror("semaphore id1 cannot be opened");
+		if (sem_unlink(SEM_PATH_1)==-1) {
+			perror("Cannot unlink sem_id1");
+			exit(EXIT_FAILURE);
+		}
+		exit(EXIT_FAILURE);
+	}
+
+	// we open second semaphore
+	sem_t * sem_id2=sem_open(SEM_PATH_2, O_CREAT, S_IRUSR | S_IWUSR, 1);
+	if ( sem_id2==SEM_FAILED) {
+		perror("semaphore id2 cannot be opened");
+		if (sem_unlink(SEM_PATH_2)==-1) {
+			perror("Cannot unlink sem_id2");
+			exit(EXIT_FAILURE);
+		}
+		exit(EXIT_FAILURE);
+	}
+
+	//initialized to 1 the first semaphore
+	if (sem_init(sem_id1, 1, 1)==-1) {
+		perror("Cannot initialize sem_id1");
+		if (sem_close(sem_id1)==-1) {
+			if (sem_unlink(SEM_PATH_1)==-1) {
+				perror("Cannot unlink sem_id1");
+				exit(EXIT_FAILURE);
+			}
+			exit(EXIT_FAILURE);
+		}
+		if (sem_unlink(SEM_PATH_1)==-1) {
+			perror("Cannot unlink sem_id1");
+			exit(EXIT_FAILURE);
+		}
+		exit(EXIT_FAILURE);
+	}
+
+	//initialized to 0 the second semaphore 
+	if (sem_init(sem_id2, 1, 0)==-1) {
+		perror("Cannot initialize sem_id2");
+		if (sem_close(sem_id2)==-1) {
+			if (sem_unlink(SEM_PATH_2)==-1) {
+				perror("Cannot unlink sem_id2");
+				exit(EXIT_FAILURE);
+			}
+			exit(EXIT_FAILURE);
+		}
+		if (sem_unlink(SEM_PATH_2)==-1) {
+			perror("Cannot unlink sem_id2");
+			exit(EXIT_FAILURE);
+		}
+		exit(EXIT_FAILURE);
+	}
     
     // Infinite loop
     while (TRUE)
@@ -211,7 +271,37 @@ int main(int argc, char *argv[])
             			draw_circle();
             			move_bmp(posx, posy);
             			vectorize();
-            			write_shm(fd_shm);
+						if (sem_wait(sem_id1)==-1) {
+							perror("It is not possible execute wait");
+							if (sem_close(sem_id1)==-1) {
+								if (sem_unlink(SEM_PATH_1)==-1) {
+									perror("Cannot unlink sem_id1");
+									exit(EXIT_FAILURE);
+								}
+								exit(EXIT_FAILURE);
+							}
+							if (sem_unlink(SEM_PATH_1)==-1) {
+								perror("Cannot unlink sem_id1");
+								exit(EXIT_FAILURE);
+							}
+							exit(EXIT_FAILURE);
+						}
+            			write_shm(shm_fd, ptr);
+						if (sem_post(sem_id2)==-1) {
+							perror("It is not possible execute post");
+							if (sem_close(sem_id2)==-1) {
+								if (sem_unlink(SEM_PATH_2)==-1) {
+									perror("Cannot unlink sem_id2");
+									exit(EXIT_FAILURE);
+								}
+								exit(EXIT_FAILURE);
+							}
+							if (sem_unlink(SEM_PATH_2)==-1) {
+								perror("Cannot unlink sem_id2");
+								exit(EXIT_FAILURE);
+							}
+							exit(EXIT_FAILURE);
+						}
             			usleep(20000);
             		}
             		break;
@@ -222,7 +312,37 @@ int main(int argc, char *argv[])
             			draw_circle();
             			move_bmp(posx, posy);
             			vectorize();
-            			write_shm(fd_shm);
+						if (sem_wait(sem_id1)==-1) {
+							perror("It is not possible execute wait");
+							if (sem_close(sem_id1)==-1) {
+								if (sem_unlink(SEM_PATH_1)==-1) {
+									perror("Cannot unlink sem_id1");
+									exit(EXIT_FAILURE);
+								}
+								exit(EXIT_FAILURE);
+							}
+							if (sem_unlink(SEM_PATH_1)==-1) {
+								perror("Cannot unlink sem_id1");
+								exit(EXIT_FAILURE);
+							}
+							exit(EXIT_FAILURE);
+						}
+            			write_shm(shm_fd, ptr);
+						if (sem_post(sem_id2)==-1) {
+							perror("It is not possible execute post");
+							if (sem_close(sem_id2)==-1) {
+								if (sem_unlink(SEM_PATH_2)==-1) {
+									perror("Cannot unlink sem_id2");
+									exit(EXIT_FAILURE);
+								}
+								exit(EXIT_FAILURE);
+							}
+							if (sem_unlink(SEM_PATH_2)==-1) {
+								perror("Cannot unlink sem_id2");
+								exit(EXIT_FAILURE);
+							}
+							exit(EXIT_FAILURE);
+						}
             			usleep(20000);
             		}
             		break;
@@ -233,7 +353,37 @@ int main(int argc, char *argv[])
             			draw_circle();
             			move_bmp(posx, posy);
             			vectorize();
-            			write_shm(fd_shm);
+						if (sem_wait(sem_id1)==-1) {
+							perror("It is not possible execute wait");
+							if (sem_close(sem_id1)==-1) {
+								if (sem_unlink(SEM_PATH_1)==-1) {
+									perror("Cannot unlink sem_id1");
+									exit(EXIT_FAILURE);
+								}
+								exit(EXIT_FAILURE);
+							}
+							if (sem_unlink(SEM_PATH_1)==-1) {
+								perror("Cannot unlink sem_id1");
+								exit(EXIT_FAILURE);
+							}
+							exit(EXIT_FAILURE);
+						}
+            			write_shm(shm_fd, ptr);
+						if (sem_post(sem_id2)==-1) {
+							perror("It is not possible execute post");
+							if (sem_close(sem_id2)==-1) {
+								if (sem_unlink(SEM_PATH_2)==-1) {
+									perror("Cannot unlink sem_id2");
+									exit(EXIT_FAILURE);
+								}
+								exit(EXIT_FAILURE);
+							}
+							if (sem_unlink(SEM_PATH_2)==-1) {
+								perror("Cannot unlink sem_id2");
+								exit(EXIT_FAILURE);
+							}
+							exit(EXIT_FAILURE);
+						}
             			usleep(20000);
             		}
             		break;
@@ -244,7 +394,37 @@ int main(int argc, char *argv[])
             			draw_circle();
             			move_bmp(posx, posy);
             			vectorize();
-            			write_shm(fd_shm);
+						if (sem_wait(sem_id1)==-1) {
+							perror("It is not possible execute wait");
+							if (sem_close(sem_id1)==-1) {
+								if (sem_unlink(SEM_PATH_1)==-1) {
+									perror("Cannot unlink sem_id1");
+									exit(EXIT_FAILURE);
+								}
+								exit(EXIT_FAILURE);
+							}
+							if (sem_unlink(SEM_PATH_1)==-1) {
+								perror("Cannot unlink sem_id1");
+								exit(EXIT_FAILURE);
+							}
+							exit(EXIT_FAILURE);
+						}
+            			write_shm(shm_fd, ptr);
+						if (sem_post(sem_id2)==-1) {
+							perror("It is not possible execute post");
+							if (sem_close(sem_id2)==-1) {
+								if (sem_unlink(SEM_PATH_2)==-1) {
+									perror("Cannot unlink sem_id2");
+									exit(EXIT_FAILURE);
+								}
+								exit(EXIT_FAILURE);
+							}
+							if (sem_unlink(SEM_PATH_2)==-1) {
+								perror("Cannot unlink sem_id2");
+								exit(EXIT_FAILURE);
+							}
+							exit(EXIT_FAILURE);
+						}
             			usleep(20000);
             		}
             		break;
@@ -258,7 +438,48 @@ int main(int argc, char *argv[])
         
         usleep(20000);
     }
-    
+
+    if (close(shm_fd)==-1) {
+    	perror("Cannot close the the file descriptor");
+  	}
+
+	if (sem_close(sem_id1)==-1) {
+		if (sem_unlink(SEM_PATH_1)==-1) {
+				perror("Cannot unlink sem_id1");
+				exit(EXIT_FAILURE);
+		}
+		exit(EXIT_FAILURE);
+	}
+
+	if (sem_close(sem_id2)==-1) {
+			if (sem_unlink(SEM_PATH_2)==-1) {
+				perror("Cannot unlink sem_id2");
+				exit(EXIT_FAILURE);
+			}
+			exit(EXIT_FAILURE);
+	}
+
+	if (sem_unlink(SEM_PATH_1)==-1) {
+				perror("Cannot unlink sem_id1");
+				exit(EXIT_FAILURE);
+	}
+
+	if (sem_unlink(SEM_PATH_2)==-1) {
+				perror("Cannot unlink sem_id2");
+				exit(EXIT_FAILURE);
+			}
+
+  	//remove the mapping
+  	if (munmap(ptr, sizeof(char))==-1) {
+    	perror("Cannot unmapp the address");
+    	exit(1);
+  	}
+
+  	if (shm_unlink(shm_name)==-1) {
+    	printf("Error removing %s\n", shm_name);
+    	exit(1);
+  	}
+
     endwin();
     return 0;
 }
