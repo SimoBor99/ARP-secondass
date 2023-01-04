@@ -9,6 +9,9 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <semaphore.h>
+#define SEM_PATH_1 "/sem_AOS_1"
+#define SEM_PATH_2 "/sem_AOS_2"
 
 // we initialize stuff...
 int posx = 0;
@@ -28,8 +31,7 @@ char bmp_vec[960000];
 
 // function for reading from shared memory
 void read_shm() {
-	strcpy(bmp_vec, ptr);
-    	//printf("%s", *ptr);
+    strcpy(bmp_vec, ptr);
 	printf("%s", bmp_vec);
 }
 
@@ -50,7 +52,7 @@ int main(int argc, char const *argv[])
 
 	// we open the shared memory
 	fd_shm = shm_open(shm_name, O_RDONLY, 0666);
-	if (fd_shm == 1) {
+	if (fd_shm ==-1) {
 		printf("Shared memory segment failed\n");
 		exit(1);
 	}
@@ -59,6 +61,16 @@ int main(int argc, char const *argv[])
 	ptr = mmap(0, SIZE, PROT_READ, MAP_SHARED, fd_shm, 0);
 	if (ptr == MAP_FAILED) {
 		printf("Map failed\n");
+	}
+	sem_t * sem_id1=sem_open(SEM_PATH_1, 0);
+	if ( sem_id1==SEM_FAILED) {
+		perror("semaphore id1 cannot be opened");
+		exit(EXIT_FAILURE);
+	}
+	sem_t * sem_id2=sem_open(SEM_PATH_2, 0);
+	if ( sem_id2==SEM_FAILED) {
+		perror("semaphore id2 cannot be opened");
+		exit(EXIT_FAILURE);
 	}
 	
     	// Infinite loop
@@ -79,11 +91,81 @@ int main(int argc, char const *argv[])
         		refresh();			// TO CANCEL AFTER DEBUGGING
         	}
 
-        	else {
+        	else {  
+					if (sem_wait(sem_id2)==-1) {
+							perror("It is not possible execute wait");
+							if (sem_close(sem_id2)==-1) {
+								if (sem_unlink(SEM_PATH_2)==-1) {
+									perror("Cannot unlink sem_id2");
+									exit(EXIT_FAILURE);
+								}
+								exit(EXIT_FAILURE);
+							}
+							if (sem_unlink(SEM_PATH_2)==-1) {
+								perror("Cannot unlink sem_id2");
+								exit(EXIT_FAILURE);
+							}
+							exit(EXIT_FAILURE);
+						}
             		read_shm();
+						if (sem_post(sem_id1)==-1) {
+							perror("It is not possible execute post");
+							if (sem_close(sem_id1)==-1) {
+								if (sem_unlink(SEM_PATH_1)==-1) {
+									perror("Cannot unlink sem_id1");
+									exit(EXIT_FAILURE);
+								}
+								exit(EXIT_FAILURE);
+							}
+							if (sem_unlink(SEM_PATH_1)==-1) {
+								perror("Cannot unlink sem_id1");
+								exit(EXIT_FAILURE);
+							}
+							exit(EXIT_FAILURE);
+						}
         	}
     	}
 
-    	endwin();
-    	return 0;
+    if (close(fd_shm)==-1) {
+    	perror("Cannot close the the file descriptor");
+  	}
+
+	if (sem_close(sem_id1)==-1) {
+		if (sem_unlink(SEM_PATH_1)==-1) {
+				perror("Cannot unlink sem_id1");
+				exit(EXIT_FAILURE);
+		}
+		exit(EXIT_FAILURE);
+	}
+
+	if (sem_close(sem_id2)==-1) {
+			if (sem_unlink(SEM_PATH_2)==-1) {
+				perror("Cannot unlink sem_id2");
+				exit(EXIT_FAILURE);
+			}
+			exit(EXIT_FAILURE);
+	}
+
+	if (sem_unlink(SEM_PATH_1)==-1) {
+				perror("Cannot unlink sem_id1");
+				exit(EXIT_FAILURE);
+	}
+
+	if (sem_unlink(SEM_PATH_2)==-1) {
+				perror("Cannot unlink sem_id2");
+				exit(EXIT_FAILURE);
+			}
+
+  	//remove the mapping
+  	if (munmap(ptr, sizeof(char))==-1) {
+    	perror("Cannot unmapp the address");
+    	exit(1);
+  	}
+
+  	if (shm_unlink(shm_name)==-1) {
+    	printf("Error removing %s\n", shm_name);
+    	exit(1);
+  	}
+	endwin();
+    return 0;
 }
