@@ -72,15 +72,15 @@ int main() {
     exit(EXIT_FAILURE);
   }
   
-  // this prevents to close the program on terminal window
-  struct sigaction s_allert;
-	memset(&s_allert, 0, sizeof(s_allert));
-	s_allert.sa_handler=SIG_IGN;
+   // this prevents to close the program on terminal window
+   struct sigaction s_allert;
+   memset(&s_allert, 0, sizeof(s_allert));
+   s_allert.sa_handler=SIG_IGN;
 	
-	// catch signal handler
-	if (sigaction(SIGINT, &s_allert, 0)==-1) {
-    	perror("Can't catch the signal");
-	}
+   // catch signal handler
+   if (sigaction(SIGINT, &s_allert, 0)==-1) {
+      perror("Can't catch the signal");
+   }
   
   // define list of arguments of processes
   char * arg_list_A[] = { "/usr/bin/konsole", "-e", "./bin/processA", shm_name, NULL };
