@@ -75,7 +75,12 @@ void build_bmp() {
 	int count = 0;
 	// this is the number of pixels of a circle of radius equal to 30 pixels
 	int count_blue = 0;
-	int n_pixel_blue = 2808;			
+	int n_pixel_blue = 2808;
+	int x_max = 0;
+	int y_max = 0;
+	int not_full_vert = 0;
+	int consecutive = 0;
+	int max_consecutive = 0;			
 	// we set the pixels of the new bmp file
 	for(int i = 0; i < width; i++) {
 		for(int j = 0; j < height; j++) {
@@ -83,22 +88,45 @@ void build_bmp() {
 			if (bmp_vec[count] == '1') {	
 				bmp_set_pixel(bmp, i, j, pixelb);
 				count_blue += 1;
+				consecutive += 1;
+				if (max_consecutive < consecutive) {
+					max_consecutive = consecutive;
+					x_max = i;
+					y_max = j;
+				}
 			}
 			// if the entry is not '1', the correspondent pixel is white
 			else {				
 				bmp_set_pixel(bmp, i, j, pixelw);
+				consecutive = 0;
 			}
 			count += 1;
-			// if we found half of the circle pixels, it means that we have reached the center of the circle, so we save the new center position
-			if (count_blue == n_pixel_blue/2) {	
+			// if we find a certain amount of vertical consecutive blue pixels, we found the center!
+			if (consecutive == 59) {
 				posx = i;			
 				posx /= 20;
 				posx = round(posx);
-				posy = j;
+				posy = j - 30;
 				posy /= 20;
 				posy = round(posy);
+				not_full_vert = 1;
 			}
 		}
+	}
+	// if we did not manage to find enough vertical blue pixels, we check the horizonthal ones
+	if (not_full_vert == 0) {
+		posx = x_max + 10;			
+		posx /= 20;
+		posx = round(posx);
+		if (max_consecutive > 31) {
+			posy = y_max - 30;
+		}
+		// this double case is done to prevent some errors
+		else {
+			posy = y_max - 59;
+		}
+		posy /= 20;
+		posy = round(posy);
 	}
 	// we check what position changed (horizonthal or vertical) and how (increased or decreased) and we set change to a char that identify how we moved
 	if (old_x < posx) {					
