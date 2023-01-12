@@ -49,16 +49,16 @@ void print_circle(int px, int py) {
   	char path[100] = "out/snap";
   	char num[20];
   	// we create a new bmp file
-	bmpp = bmp_create(width, height, depth);
+	bmpp = bmp_create(width+60, height+60, depth);
   	int radius = 30;
   	// we set every pixel inside the circle radius to blue
 	for(int x = -radius; x <= radius; x++) {
 		for(int y = -radius; y <= radius; y++) {
 	      		if(sqrt(x*x + y*y) < radius) {
-          			bmp_set_pixel(bmpp, width/2 + x + px, height/2 + y - py, pixelp);
+          			bmp_set_pixel(bmpp, (width/2) + 30 + x + px, (height/2) + 30 + y - py, pixelp);
       			}
 				else {
-      				bmp_set_pixel(bmp, width/2 + x, height/2 + y, pixelw);
+      				bmp_set_pixel(bmp, (width/2) +30 + x, (height/2) + 30 + y, pixelw);
       			}
     		}
   	}
@@ -396,7 +396,7 @@ int main(int argc, char *argv[]) {
             	case KEY_RIGHT:
             		// horizonthal position is incremented
             		// we check if we are inside the limited area where we can move
-            		if (posx < 40) {
+            		if (posx < 39) {
             			posx += 1;
             			move_circle(cmd);
             			draw_circle();
@@ -447,7 +447,7 @@ int main(int argc, char *argv[]) {
             	case KEY_DOWN:
             		// vertical position is decremented
             		// we check if we are inside the limited area where we can move
-            		if (posy > -15) {
+            		if (posy > -14) {
             			posy -= 1;
             			move_circle(cmd);
             			draw_circle();
